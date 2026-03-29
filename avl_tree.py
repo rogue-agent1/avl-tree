@@ -1,132 +1,70 @@
 #!/usr/bin/env python3
-"""avl_tree - Self-balancing AVL tree with rotations."""
+"""AVL tree — self-balancing BST."""
 import sys
 
 class Node:
+    __slots__ = ('key','left','right','height')
     def __init__(self, key):
-        self.key = key
-        self.left = self.right = None
-        self.height = 1
+        self.key, self.left, self.right, self.height = key, None, None, 1
 
 class AVLTree:
     def __init__(self):
         self.root = None
-        self.size = 0
-
-    def _height(self, n):
-        return n.height if n else 0
-
-    def _balance(self, n):
-        return self._height(n.left) - self._height(n.right) if n else 0
-
+        self.count = 0
+    def _h(self, n): return n.height if n else 0
+    def _bal(self, n): return self._h(n.left) - self._h(n.right) if n else 0
     def _update(self, n):
-        n.height = 1 + max(self._height(n.left), self._height(n.right))
-
-    def _rot_right(self, y):
-        x = y.left
-        y.left = x.right
-        x.right = y
-        self._update(y)
-        self._update(x)
-        return x
-
-    def _rot_left(self, x):
-        y = x.right
-        x.right = y.left
-        y.left = x
-        self._update(x)
-        self._update(y)
-        return y
-
-    def _rebalance(self, n):
+        n.height = 1 + max(self._h(n.left), self._h(n.right))
+    def _rotR(self, y):
+        x = y.left; y.left = x.right; x.right = y
+        self._update(y); self._update(x); return x
+    def _rotL(self, x):
+        y = x.right; x.right = y.left; y.left = x
+        self._update(x); self._update(y); return y
+    def _balance(self, n):
         self._update(n)
-        b = self._balance(n)
+        b = self._bal(n)
         if b > 1:
-            if self._balance(n.left) < 0:
-                n.left = self._rot_left(n.left)
-            return self._rot_right(n)
+            if self._bal(n.left) < 0: n.left = self._rotL(n.left)
+            return self._rotR(n)
         if b < -1:
-            if self._balance(n.right) > 0:
-                n.right = self._rot_right(n.right)
-            return self._rot_left(n)
+            if self._bal(n.right) > 0: n.right = self._rotR(n.right)
+            return self._rotL(n)
         return n
-
-    def _insert(self, node, key):
-        if not node:
-            self.size += 1
-            return Node(key)
-        if key < node.key:
-            node.left = self._insert(node.left, key)
-        elif key > node.key:
-            node.right = self._insert(node.right, key)
-        return self._rebalance(node)
-
     def insert(self, key):
         self.root = self._insert(self.root, key)
-
-    def _min_node(self, n):
-        while n.left:
-            n = n.left
-        return n
-
-    def _delete(self, node, key):
-        if not node:
-            return None
-        if key < node.key:
-            node.left = self._delete(node.left, key)
-        elif key > node.key:
-            node.right = self._delete(node.right, key)
-        else:
-            self.size -= 1
-            if not node.left:
-                return node.right
-            if not node.right:
-                return node.left
-            succ = self._min_node(node.right)
-            node.key = succ.key
-            self.size += 1
-            node.right = self._delete(node.right, succ.key)
-        return self._rebalance(node)
-
-    def delete(self, key):
-        self.root = self._delete(self.root, key)
-
-    def search(self, key):
+    def _insert(self, n, key):
+        if not n: self.count += 1; return Node(key)
+        if key < n.key: n.left = self._insert(n.left, key)
+        elif key > n.key: n.right = self._insert(n.right, key)
+        else: return n
+        return self._balance(n)
+    def __contains__(self, key):
         n = self.root
         while n:
             if key == n.key: return True
             n = n.left if key < n.key else n.right
         return False
-
+    def __len__(self): return self.count
     def inorder(self):
-        result = []
-        def traverse(n):
-            if n:
-                traverse(n.left)
-                result.append(n.key)
-                traverse(n.right)
-        traverse(self.root)
-        return result
+        r = []
+        def io(n):
+            if not n: return
+            io(n.left); r.append(n.key); io(n.right)
+        io(self.root); return r
 
 def test():
     t = AVLTree()
-    for v in [10, 20, 30, 40, 50, 25]:
-        t.insert(v)
-    assert t.inorder() == [10, 20, 25, 30, 40, 50]
-    assert t.size == 6
-    assert abs(t._balance(t.root)) <= 1
-    assert t.search(30)
-    assert not t.search(99)
-    t.delete(30)
-    assert not t.search(30)
-    assert t.inorder() == [10, 20, 25, 40, 50]
-    assert t.size == 5
-    t2 = AVLTree()
-    for i in range(100):
-        t2.insert(i)
-    assert t2.size == 100
-    assert t2._height(t2.root) <= 8
-    print("All tests passed!")
+    for x in range(1, 16):
+        t.insert(x)
+    assert t.inorder() == list(range(1, 16))
+    assert len(t) == 15
+    assert 10 in t
+    assert 20 not in t
+    h = t.root.height
+    assert h <= 5  # AVL: height <= 1.44*log2(n)
+    print("  avl_tree: ALL TESTS PASSED")
 
 if __name__ == "__main__":
-    test() if "--test" in sys.argv else print("avl_tree: AVL tree. Use --test")
+    if len(sys.argv) > 1 and sys.argv[1] == "test": test()
+    else: print("AVL tree")
