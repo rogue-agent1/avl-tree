@@ -1,10 +1,3 @@
-# avl-tree
-
-Single-file Python CLI. Zero dependencies.
-
-## Usage
-
-```bash
-python3 avl_tree.py
-python3 avl_tree.py test
-```
+# avl_tree
+AVL tree — self-balancing BST with O(log n) operations.
+Single-file Python, zero dependencies.
