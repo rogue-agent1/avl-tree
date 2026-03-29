@@ -1,10 +1,6 @@
-# Avl Tree
-
-A zero-dependency Python CLI tool.
-
+# avl_tree
+Single-file Python CLI tool. Zero dependencies, Python 3.8+.
 ## Usage
-
 ```bash
-python avl_tree.py test
-python avl_tree.py demo
+python3 avl_tree.py --test
 ```

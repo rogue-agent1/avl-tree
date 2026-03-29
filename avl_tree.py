@@ -1,68 +1,132 @@
 #!/usr/bin/env python3
-"""AVL tree with self-balancing rotations."""
+"""avl_tree - Self-balancing AVL tree with rotations."""
 import sys
 
 class Node:
-    def __init__(self, key, val=None):
-        self.key, self.val, self.left, self.right, self.height = key, val, None, None, 1
+    def __init__(self, key):
+        self.key = key
+        self.left = self.right = None
+        self.height = 1
 
-def height(n): return n.height if n else 0
-def balance(n): return height(n.left) - height(n.right) if n else 0
-def update_height(n): n.height = 1 + max(height(n.left), height(n.right))
+class AVLTree:
+    def __init__(self):
+        self.root = None
+        self.size = 0
 
-def rotate_right(y):
-    x = y.left; t = x.right; x.right = y; y.left = t
-    update_height(y); update_height(x); return x
+    def _height(self, n):
+        return n.height if n else 0
 
-def rotate_left(x):
-    y = x.right; t = y.left; y.left = x; x.right = t
-    update_height(x); update_height(y); return y
+    def _balance(self, n):
+        return self._height(n.left) - self._height(n.right) if n else 0
 
-def insert(root, key, val=None):
-    if not root: return Node(key, val)
-    if key < root.key: root.left = insert(root.left, key, val)
-    elif key > root.key: root.right = insert(root.right, key, val)
-    else: root.val = val; return root
-    update_height(root); b = balance(root)
-    if b > 1 and key < root.left.key: return rotate_right(root)
-    if b < -1 and key > root.right.key: return rotate_left(root)
-    if b > 1 and key > root.left.key: root.left = rotate_left(root.left); return rotate_right(root)
-    if b < -1 and key < root.right.key: root.right = rotate_right(root.right); return rotate_left(root)
-    return root
+    def _update(self, n):
+        n.height = 1 + max(self._height(n.left), self._height(n.right))
 
-def search(root, key):
-    if not root: return None
-    if key == root.key: return root.val
-    return search(root.left, key) if key < root.key else search(root.right, key)
+    def _rot_right(self, y):
+        x = y.left
+        y.left = x.right
+        x.right = y
+        self._update(y)
+        self._update(x)
+        return x
 
-def inorder(root):
-    if not root: return []
-    return inorder(root.left) + [(root.key, root.val)] + inorder(root.right)
+    def _rot_left(self, x):
+        y = x.right
+        x.right = y.left
+        y.left = x
+        self._update(x)
+        self._update(y)
+        return y
 
-def is_balanced(root):
-    if not root: return True
-    return abs(balance(root)) <= 1 and is_balanced(root.left) and is_balanced(root.right)
+    def _rebalance(self, n):
+        self._update(n)
+        b = self._balance(n)
+        if b > 1:
+            if self._balance(n.left) < 0:
+                n.left = self._rot_left(n.left)
+            return self._rot_right(n)
+        if b < -1:
+            if self._balance(n.right) > 0:
+                n.right = self._rot_right(n.right)
+            return self._rot_left(n)
+        return n
 
-def main():
-    if len(sys.argv) < 2: print("Usage: avl_tree.py <demo|test>"); return
-    if sys.argv[1] == "test":
-        root = None
-        for i in range(100): root = insert(root, i, f"v{i}")
-        assert is_balanced(root)
-        assert height(root) <= 8  # log2(100) ~ 7
-        assert search(root, 50) == "v50"
-        assert search(root, 999) is None
-        items = inorder(root)
-        assert len(items) == 100
-        assert items == sorted(items, key=lambda x: x[0])
-        # Update
-        root = insert(root, 50, "updated")
-        assert search(root, 50) == "updated"
-        assert is_balanced(root)
-        print("All tests passed!")
-    else:
-        root = None
-        for i in [5,3,7,1,4,6,8]: root = insert(root, i)
-        print(f"Balanced: {is_balanced(root)}, Height: {height(root)}")
+    def _insert(self, node, key):
+        if not node:
+            self.size += 1
+            return Node(key)
+        if key < node.key:
+            node.left = self._insert(node.left, key)
+        elif key > node.key:
+            node.right = self._insert(node.right, key)
+        return self._rebalance(node)
 
-if __name__ == "__main__": main()
+    def insert(self, key):
+        self.root = self._insert(self.root, key)
+
+    def _min_node(self, n):
+        while n.left:
+            n = n.left
+        return n
+
+    def _delete(self, node, key):
+        if not node:
+            return None
+        if key < node.key:
+            node.left = self._delete(node.left, key)
+        elif key > node.key:
+            node.right = self._delete(node.right, key)
+        else:
+            self.size -= 1
+            if not node.left:
+                return node.right
+            if not node.right:
+                return node.left
+            succ = self._min_node(node.right)
+            node.key = succ.key
+            self.size += 1
+            node.right = self._delete(node.right, succ.key)
+        return self._rebalance(node)
+
+    def delete(self, key):
+        self.root = self._delete(self.root, key)
+
+    def search(self, key):
+        n = self.root
+        while n:
+            if key == n.key: return True
+            n = n.left if key < n.key else n.right
+        return False
+
+    def inorder(self):
+        result = []
+        def traverse(n):
+            if n:
+                traverse(n.left)
+                result.append(n.key)
+                traverse(n.right)
+        traverse(self.root)
+        return result
+
+def test():
+    t = AVLTree()
+    for v in [10, 20, 30, 40, 50, 25]:
+        t.insert(v)
+    assert t.inorder() == [10, 20, 25, 30, 40, 50]
+    assert t.size == 6
+    assert abs(t._balance(t.root)) <= 1
+    assert t.search(30)
+    assert not t.search(99)
+    t.delete(30)
+    assert not t.search(30)
+    assert t.inorder() == [10, 20, 25, 40, 50]
+    assert t.size == 5
+    t2 = AVLTree()
+    for i in range(100):
+        t2.insert(i)
+    assert t2.size == 100
+    assert t2._height(t2.root) <= 8
+    print("All tests passed!")
+
+if __name__ == "__main__":
+    test() if "--test" in sys.argv else print("avl_tree: AVL tree. Use --test")
